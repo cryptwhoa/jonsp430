@@ -1,0 +1,14 @@
+jonsp430 is a custom emulator for the MSP430 to assist in the microcorruption CTF (www.microcorruption.com).
+
+There exist discrepancies between the emulator in the CTF and the official Texas Instruments spec.  jonsp430 follows the CTF's emulator.
+
+Features in jonsp430 which cannot be found in the CTF's emulator:
+* Random seed specification.  You can use the same random seed between sessions.
+* Memory watchpoints.  You can choose to stop execution if a memory address is accessed.
+* Logging functionality.  You can have jonsp430 write all instructions it executes to a file, along with the values contained in the src and dst registers, and the values contained in the memory pointed at by the src and dst registers.
+
+Current limitations:
+* Only one breakpoint may be set.
+* Resetting an instance may be unreliable; you may just want to exit the program and reload/rerun if you need to restart.
+* No register watchpoints.
+* The levels included are the versions that I was given.  I heard someone saying that levels slightly vary by user as an anti-cheat mechanism, but haven't confirmed it myself.
