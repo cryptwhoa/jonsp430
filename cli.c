@@ -19,6 +19,8 @@ typedef void (* cli_operation_T) (struct state*, struct debug_state*, char **);
 struct command_type {
         char *name;
         cli_operation_T op;
+
+        char *help_string;
 };
 
 struct command_instance {
@@ -32,15 +34,16 @@ void cli_quit(struct state *context, struct debug_state *dbg_state, char **args)
 void cli_start(struct state *context) {
         struct debug_state *dbg_context = init_debug_state();
 
-	printf ("===================================\n");
-	printf ("=            jonsp430             =\n");
-	printf ("=                                 =\n");
-	printf ("= custom msp430 emulator/debugger =\n");
-	printf ("===================================\n");
-	printf ("\n");
-        printf ("legend: %s, %s, %s\n", "debugger text", FROM_CONSOLE("device stdout"), FROM_ERROR("device stderr"));
-        printf ("the random seed for this session is: %d\n", context->seed);
-        printf ("\n");
+	printf("===================================\n");
+	printf("=            jonsp430             =\n");
+	printf("=                                 =\n");
+	printf("= custom msp430 emulator/debugger =\n");
+	printf("===================================\n");
+	printf("\n");
+        printf("legend: %s, %s, %s\n", "debugger text", FROM_CONSOLE("device stdout"), FROM_ERROR("device stderr"));
+        printf("the random seed for this session is: %d\n", context->seed);
+        printf("\ntype \"help\" for a list of available commands\n");
+        printf("\n");
 
 	char line[MAX_COMMAND_LENGTH];
 	int keep_going = 1;
@@ -79,6 +82,7 @@ void cli_unrecognized(struct state *context, struct debug_state *dbg_state, char
 void cli_ambiguous(struct state *context, struct debug_state *dbg_state, char **args) {
         printf ("ambiguous instruction: %s\n", args[0]);
 }
+
 
 // no args
 void cli_none (struct state *context, struct debug_state *dbg_state, char **args) { }
@@ -252,19 +256,36 @@ void cli_unbreak (struct state *context, struct debug_state *dbg_context, char *
         printf ("NOT IMPLEMENTED YET\n");
 }
 
+void cli_help(struct state *context, struct debug_state *dbg_state, char **args);
+
 struct command_type command_function_table[] = {
-        {"break",               cli_break},
-        {"continue",            cli_continue},
-        {"disassemble",         cli_disassemble},
-        {"log",                 cli_log},
-        {"next",                cli_next},
-        {"quit",                cli_quit},
-        {"read",                cli_read},
-        {"registers",           cli_regs},
-        {"reset",               cli_reset},
-        {"unbreak",             cli_unbreak},
-        {"unlog",               cli_unlog},
+        {"break", cli_break,
+                "set a breakpoint at <ARG1>; this includes either memory access at <ARG1>, or when executing the instruction located at <ARG1>"}, 
+        {"continue", cli_continue,
+                "continues execution until one of the following occurs: (1) the door is unlocked; (2) the CPUOFF flag is set; (3) a breakpoint is hit; (4) a \"gets\" interrupt; (5) a crash"},  
+        {"disassemble", cli_disassemble, 
+                "prints disassembly of <ARG2=5> instructions starting at <ARG1=0x4400>"}, 
+        {"help", cli_help,
+                "get help on function named <ARG1>; key: <ARGi> is 'i'th argument provided to function; <ARGi=d> is 'i'th argument provided to function, which takes a default value of 'd'"},
+        {"log", cli_log,
+                "log execution data to file named <ARG1=stdout>"}, 
+        {"next", cli_next,
+                "execute one instruction"},
+        {"quit", cli_quit,
+                "quit jonsp430"},
+        {"read", cli_read,
+                "read <ARG2=16> bytes starting at memory location <ARG1>"},
+        {"registers", cli_regs,          
+                "view value of registers"},
+        {"reset", cli_reset,
+                "reset cpu to initial state at beginning of program"},
+        {"unbreak", cli_unbreak,
+                "not implemented yet"},
+        {"unlog", cli_unlog,
+                "stop logging instructions"},
 };
+
+#define NUM_COMMANDS    (sizeof (command_function_table) / sizeof(struct command_type))
 
 struct command_instance cli_parse (char *line) {
 
@@ -300,7 +321,8 @@ struct command_instance cli_parse (char *line) {
                 return ret;
         }
 
-        for (i=0; i < sizeof(command_function_table) / sizeof(struct command_type);  ++i) {
+        // for (i=0; i < sizeof(command_function_table) / sizeof(struct command_type);  ++i) {
+        for (i=0; i < NUM_COMMANDS; ++i) {
                 if (strstr(command_function_table[i].name, ret.args[0]) == command_function_table[i].name) {
                         ++num_matches;
                         ret_type.name = command_function_table[i].name;
@@ -318,4 +340,27 @@ struct command_instance cli_parse (char *line) {
 
         ret.type = ret_type;
         return ret;
+}
+
+void cli_help(struct state *context, struct debug_state *dbg_state, char **args) {
+        int i;
+        int found = 0;
+        if (args[1] == NULL) {
+                printf("\navailable commands:\n");
+                for (i = 0; i < NUM_COMMANDS; ++i) {
+                        printf("\t%s\n", command_function_table[i].name);
+                }
+                printf("\ntype \"help <command>\" to learn more about an individual command\n\n");
+        } else {
+                for (i = 0; i < NUM_COMMANDS; ++i) {
+                        if (!strcmp(command_function_table[i].name, args[1])) {
+                                printf("\n\t%s: %s\n\n", command_function_table[i].name, command_function_table[i].help_string);
+                                found = 1;
+                        }
+                }
+
+                if (!found) {
+                        printf("unrecognized command; type \"help\" to see list of available commands.\n");
+                }
+        }
 }
